@@ -16,8 +16,9 @@
 #endif
 
 // -----Shared Variables-----
-unsigned char *msg = "CS120B is Legend... wait for it DARY!";
-unsigned char msgIndex = 0, len = sizeof(msg)/sizeof(char);
+const unsigned char msg[] = "CS120B is Legend... wait for it DARY!";
+const unsigned char len = (sizeof(msg)-1)/sizeof(char);
+unsigned char msgIndex = 0;
 // --------------------------
 
 enum LCD_States { output };
