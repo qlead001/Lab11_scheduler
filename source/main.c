@@ -17,7 +17,7 @@
 
 // -----Shared Variables-----
 const unsigned char msg[] = "CS120B is Legend... wait for it DARY!";
-const unsigned char len = (sizeof(msg)-1)/sizeof(char);
+const unsigned char len = sizeof(msg)/sizeof(char)-1;
 unsigned char msgIndex = 0;
 // --------------------------
 
