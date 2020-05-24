@@ -62,6 +62,7 @@ int main(void) {
     }
     TimerSet(GCD);
     TimerOn();
+    LCD_init();
 
     while (1) {
         for (i = 0; i < numTasks; i++) {
