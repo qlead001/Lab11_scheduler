@@ -32,7 +32,7 @@ int LCDTick(int state) {
         case output:
             LCD_Cursor(1);
             unsigned char remaining = len-msgIndex, i;
-            for (i = 0; i < 32 && i < remaining; i++) {
+            for (i = 0; i < 16 && i < remaining; i++) {
                 LCD_WriteData(msg[i+msgIndex]);
             }
             msgIndex = (msgIndex+i)%len;
