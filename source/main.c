@@ -1,8 +1,8 @@
 /*	Author: Quinn Leader qlead001@ucr.edu
  *  Partner(s) Name: NA
  *	Lab Section: 026
- *	Assignment: Lab 11  Exercise 3
- *	Exercise Description: Display key pressed on LCD
+ *	Assignment: Lab 11  Exercise 4
+ *	Exercise Description: Overwrite text on LCD
  *
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
@@ -31,7 +31,7 @@
 #endif
 
 // -----Shared Variables-----
-unsigned char key = 0, prev = 0;
+unsigned char key = 0, update = 0, pos = 0;
 // --------------------------
 
 enum Keypad_States { press, release };
@@ -51,6 +51,7 @@ int KeypadTick(int state) {
             if (input == '\0') {
                 state = press;
                 key = pressed;
+                update = 1;
             }
             break;
         default: state = press; break;
@@ -67,10 +68,11 @@ int LCDTick(int state) {
     }
     switch (state) {
         case output:
-            if (key != '\0' && key != prev) {
-                LCD_Cursor(1);
+            if (key != '\0' && update) {
                 LCD_WriteData(key);
-                prev = key;
+                update = 0;
+                pos = (pos+1)%16;
+                if (pos == 0) LCD_Cursor(1);
             }
             break;
     }
@@ -105,6 +107,8 @@ int main(void) {
     TimerSet(GCD);
     TimerOn();
     LCD_init();
+    LCD_DisplayString(1, "Congratulations!");
+    LCD_Cursor(1);
 
     while (1) {
         for (i = 0; i < numTasks; i++) {

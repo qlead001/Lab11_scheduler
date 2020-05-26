@@ -18,8 +18,8 @@
 // approach with extreme caution. Expect strange results.
 #undef PORTC
 #undef PINC
-#define PORTC PORTB
-#define PINC PINB
+#define PORTC PORTA
+#define PINC PINA
 #include "keypad.h"
 #undef PORTC
 #undef PINC
@@ -31,7 +31,7 @@
 #endif
 
 // -----Shared Variables-----
-unsigned char key = 0, prev = 0, pos = 0;
+unsigned char key = 0, update = 0, pos = 0;
 // --------------------------
 
 enum Keypad_States { press, release };
@@ -51,6 +51,7 @@ int KeypadTick(int state) {
             if (input == '\0') {
                 state = press;
                 key = pressed;
+                update = 1;
             }
             break;
         default: state = press; break;
@@ -67,10 +68,10 @@ int LCDTick(int state) {
     }
     switch (state) {
         case output:
-            if (key != '\0' && key != prev) {
+            if (key != '\0' && update) {
                 LCD_WriteData(key);
-                prev = key;
-                pos = (pos+1)%17;
+                update = 0;
+                pos = (pos+1)%16;
                 if (pos == 0) LCD_Cursor(1);
             }
             break;
@@ -80,7 +81,7 @@ int LCDTick(int state) {
 
 int main(void) {
     /* Insert DDR and PORT initializations */
-    DDRB = 0xF0; PORTB = 0x0F;
+    DDRA = 0xF0; PORTA = 0x0F;
     DDRC = 0xFF; PORTC = 0x00;
     DDRD = 0xFF; PORTD = 0x00;
     /* Insert your solution below */
