@@ -26,9 +26,9 @@
 echo ======================================================\n
 echo Running all tests..."\n\n
 
-test "Wait => PORTB: 0"
+test "Wait => key: 0"
 timeContinue 2
-expectPORTB 0x00
+expect key 0
 checkResult
 
 # Report on how many tests passed/tests ran

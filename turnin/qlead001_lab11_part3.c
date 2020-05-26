@@ -18,8 +18,8 @@
 // approach with extreme caution. Expect strange results.
 #undef PORTC
 #undef PINC
-#define PORTC PORTB
-#define PINC PINB
+#define PORTC PORTA
+#define PINC PINA
 #include "keypad.h"
 #undef PORTC
 #undef PINC
@@ -79,7 +79,7 @@ int LCDTick(int state) {
 
 int main(void) {
     /* Insert DDR and PORT initializations */
-    DDRB = 0xF0; PORTB = 0x0F;
+    DDRA = 0xF0; PORTA = 0x0F;
     DDRC = 0xFF; PORTC = 0x00;
     DDRD = 0xFF; PORTD = 0x00;
     /* Insert your solution below */
