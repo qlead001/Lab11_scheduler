@@ -1,14 +1,12 @@
 /*	Author: Quinn Leader qlead001@ucr.edu
  *  Partner(s) Name: NA
  *	Lab Section: 026
- *	Assignment: Lab 11  Exercise 5
- *	Exercise Description: Game on LCD
+ *	Assignment: Lab 11  Exercise 2
+ *	Exercise Description: Scroll text on LCD
  *
  *	I acknowledge all content contained herein, excluding template or example
  *	code, is my own original work.
  */
-#include <stdlib.h>
-#include <time.h>
 #include <avr/io.h>
 #include "timer.h"
 #include "scheduler.h"
@@ -18,120 +16,12 @@
 #endif
 
 // -----Shared Variables-----
-unsigned char pause = 1, up = 0, down = 0, gameover = 0,
-              update = 0, pos = 0;
-unsigned short score = 0;
-unsigned char row1[16] = {0}, row2[16] = {0};
+const unsigned char msg[] = "CS120B is Legend... wait for it DARY!";
+const unsigned char len = sizeof(msg)/sizeof(char)-1;
+char msgIndex = -16;
 // --------------------------
 
-enum Button_States { input };
-
-unsigned char old0 = 0, old1 = 0, old2 = 0;
-
-int ButtonTick(int state) {
-    unsigned char in = (~PINA);
-    unsigned char A0 = (in&0x01), A1 = (in&0x02), A2 = (in&0x04);
-    switch (state) {
-        case input:
-            if (A0 != old0) {
-                old0 = A0;
-                if (A0) up = 1;
-            }
-            if (A1 != old1) {
-                old1 = A1;
-                if (A1) down = 1;
-            }
-            if (A2 != old2) {
-                old2 = A2;
-                if (A2) pause = pause?0:1;
-            }
-            break;
-        default: state = input; break;
-    }
-    return state;
-}
-
-enum Game_States { gamePause, gamePlay };
-
-const unsigned char maxPeriod = 5, startDiff = 10;
-unsigned char countPeriod, periods, cycles, difficulty, start = 1;
-
-void clearRows(void) {
-    for (unsigned char i = 0; i < 16; i++) {
-        row1[i] = 0;
-        row2[i] = 0;
-    }
-}
-
-int GameTick(int state) {
-    switch (state) {
-        case gamePause:
-            if (!pause) {
-                if (gameover || start) {
-                    score = 0;
-                    gameover = start = 0;
-                    periods = maxPeriod;
-                    difficulty = startDiff;
-                    countPeriod = cycles = 0;
-                    clearRows();
-                    LCD_ClearScreen();
-                }
-                state = gamePlay;
-            }
-            break;
-        case gamePlay:
-            if (pause) state = gamePause;
-            else {
-                if (up) {
-                    pos = 0;
-                    up = down = 0;
-                } else if (down) {
-                    pos = 1;
-                    down = 0;
-                }
-                if ((pos && row2[0])||(!pos && row1[0])) {
-                    update = gameover = 1;
-                    state = pause;
-                } else if (countPeriod++ == periods) {
-                    countPeriod = 0;
-                    update = 1;
-                    for (unsigned char i = 0; i < 15; i++) {
-                        row1[i] = row1[i+1];
-                        row2[i] = row2[i+1];
-                    }
-                    row1[15] = 0; row2[15] = 0;
-                    if (!(rand() % difficulty)) {
-                        if (rand() % 2) row2[15] = 1;
-                        else row1[15] = 1;
-                    }
-                    if (cycles++ == 10) {
-                        cycles = 0;
-                        if (periods > 1) periods--;
-                        else if (difficulty > 2) difficulty--;
-                    }
-                    score += 1+startDiff+maxPeriod-periods-difficulty;
-                }
-            }
-            break;
-        default: state = gamePause; break;
-    }
-    return state;
-}
-
 enum LCD_States { output };
-
-void printScore(unsigned short score) {
-    unsigned char suppress = 0;
-    for (unsigned short div = 10000; div > 1; div /= 10) {
-        unsigned char num = (unsigned char)(score/div);
-        score = score % div;
-        if (!suppress || num > 0) {
-            suppress = 1;
-            LCD_WriteData(num+'0');
-        }
-    }
-    LCD_WriteData((unsigned char)(score)+'0');
-}
 
 int LCDTick(int state) {
     switch (state) {
@@ -140,38 +30,14 @@ int LCDTick(int state) {
     }
     switch (state) {
         case output:
-            if (update) {
-                update = 0;
-                if (gameover) {
-                    LCD_DisplayString(4, "Game Over!");
-                    LCD_DisplayString(16+4, "Score:");
-                    LCD_Cursor(27);
-                    printScore(score);
-                }else{
-                    unsigned char prev = row1[0];
-                    LCD_Cursor(1);
-                    LCD_WriteData(prev?'#':' ');
-                    for (unsigned char i = 1; i < 16; i++) {
-                        if (prev != row1[i]) {
-                            LCD_Cursor(i+1);
-                            LCD_WriteData(row1[i]?'#':' ');
-                        }
-                    }
-                    prev = row2[0];
-                    LCD_Cursor(17);
-                    LCD_WriteData(prev?'#':' ');
-                    for (unsigned char i = 1; i < 16; i++) {
-                        if (prev != row2[i]) {
-                            LCD_Cursor(i+17);
-                            LCD_WriteData(row2[i]?'#':' ');
-                        }
-                    }
-                }
+            LCD_Cursor(1);
+            unsigned char i;
+            for (i = 0; i < 16; i++) {
+                if (msgIndex+i < 0 || msgIndex+i >= len) LCD_WriteData(' ');
+                else LCD_WriteData(msg[i+msgIndex]);
             }
-            if (!gameover) {
-                if (pos) LCD_Cursor(17);
-                else LCD_Cursor(1);
-            }
+            msgIndex++;
+            if (msgIndex >= len) msgIndex = -16;
             break;
     }
     return state;
@@ -179,40 +45,26 @@ int LCDTick(int state) {
 
 int main(void) {
     /* Insert DDR and PORT initializations */
-    DDRA = 0x00; PORTA = 0xFF;
     DDRC = 0xFF; PORTC = 0x00;
     DDRD = 0xFF; PORTD = 0x00;
     /* Insert your solution below */
-    static task task1, task2, task3;
-    task *tasks[] = { &task1, &task2, &task3 };
+    static task task1;
+    task *tasks[] = { &task1 };
     const unsigned short numTasks = sizeof(tasks)/sizeof(task*);
 
-    task1.state = input;
-    task1.period = 100;
+    task1.state = output;
+    task1.period = 300;
     task1.elapsedTime = task1.period;
-    task1.TickFct = &ButtonTick;
-
-    task2.state = gamePause;
-    task2.period = 100;
-    task2.elapsedTime = task2.period;
-    task2.TickFct = &GameTick;
-
-    task3.state = output;
-    task3.period = 100;
-    task3.elapsedTime = task3.period;
-    task3.TickFct = &LCDTick;
+    task1.TickFct = &LCDTick;
 
     unsigned short i;
     unsigned long GCD = tasks[0]->period;
     for (i = 1; i < numTasks; i++) {
         GCD = findGCD(GCD, tasks[i]->period);
     }
-    srand(time(NULL));
     TimerSet(GCD);
     TimerOn();
     LCD_init();
-    LCD_DisplayString(2, "Press to start");
-    LCD_Cursor(1);
 
     while (1) {
         for (i = 0; i < numTasks; i++) {

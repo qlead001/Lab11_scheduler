@@ -18,7 +18,7 @@
 // -----Shared Variables-----
 const unsigned char msg[] = "CS120B is Legend... wait for it DARY!";
 const unsigned char len = sizeof(msg)/sizeof(char)-1;
-unsigned char msgIndex = 0;
+char msgIndex = -16;
 // --------------------------
 
 enum LCD_States { output };
@@ -31,11 +31,13 @@ int LCDTick(int state) {
     switch (state) {
         case output:
             LCD_Cursor(1);
-            unsigned char remaining = len-msgIndex, i;
-            for (i = 0; i < 16 && i < remaining; i++) {
-                LCD_WriteData(msg[i+msgIndex]);
+            unsigned char i;
+            for (i = 0; i < 16; i++) {
+                if (msgIndex+i < 0 || msgIndex+i >= len) LCD_WriteData(' ');
+                else LCD_WriteData(msg[i+msgIndex]);
             }
-            msgIndex = (msgIndex+i)%len;
+            msgIndex++;
+            if (msgIndex >= len) msgIndex = -16;
             break;
     }
     return state;

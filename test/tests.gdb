@@ -26,16 +26,9 @@
 echo ======================================================\n
 echo Running all tests..."\n\n
 
-test "Wait => task2.state: gamePause"
-setPINA 0xFF
+test "Wait => PORTB: 0"
 timeContinue 2
-expect task2.state gamePause
-checkResult
-
-test "PINA2: 0 => task2.state: gamePause"
-setPINA 0xFB
-timeContinue 2
-expect task2.state gamePlay
+expectPORTB 0x00
 checkResult
 
 # Report on how many tests passed/tests ran
