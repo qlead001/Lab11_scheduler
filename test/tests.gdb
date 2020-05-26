@@ -26,9 +26,16 @@
 echo ======================================================\n
 echo Running all tests..."\n\n
 
-test "Wait => key: 0"
+test "Wait => task2.state: gamePause"
+setPINA 0xFF
 timeContinue 2
-expect key 0
+expect task2.state gamePause
+checkResult
+
+test "PINA2: 0 => task2.state: gamePause"
+setPINA 0xFB
+timeContinue 2
+expect task2.state gamePlay
 checkResult
 
 # Report on how many tests passed/tests ran

@@ -9,6 +9,7 @@
  */
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 #include <avr/io.h>
 #include "timer.h"
 #include "scheduler.h"
@@ -16,6 +17,14 @@
 #ifdef _SIMULATE_
 #include "simAVRHeader.h"
 #endif
+
+void LCD_DisplayCenter( unsigned char row, const unsigned char* string) {
+    unsigned char pad = (16-strlen(string))/2 + 1;
+    LCD_Cursor(16*row+pad);
+    while(*string) {
+        LCD_WriteData(*string++);
+    }
+}
 
 // -----Shared Variables-----
 unsigned char pause = 1, up = 0, down = 0, gameover = 0,
@@ -69,6 +78,7 @@ int GameTick(int state) {
             if (!pause) {
                 if (gameover || start) {
                     score = 0;
+                    pos = 0;
                     gameover = start = 0;
                     periods = maxPeriod;
                     difficulty = startDiff;
@@ -76,6 +86,7 @@ int GameTick(int state) {
                     clearRows();
                     LCD_ClearScreen();
                 }
+                up = down = 0;
                 state = gamePlay;
             }
             break;
@@ -90,7 +101,7 @@ int GameTick(int state) {
                     down = 0;
                 }
                 if ((pos && row2[0])||(!pos && row1[0])) {
-                    update = gameover = 1;
+                    update = gameover = pause = 1;
                     state = pause;
                 } else if (countPeriod++ == periods) {
                     countPeriod = 0;
@@ -120,17 +131,20 @@ int GameTick(int state) {
 
 enum LCD_States { output };
 
-void printScore(unsigned short score) {
-    unsigned char suppress = 0;
+void scoreString(unsigned short score, unsigned char* buf) {
+    strcpy(buf, "Score: ");
+    unsigned char suppress = 1;
+    unsigned char i = strlen(buf);
     for (unsigned short div = 10000; div > 1; div /= 10) {
         unsigned char num = (unsigned char)(score/div);
         score = score % div;
         if (!suppress || num > 0) {
-            suppress = 1;
-            LCD_WriteData(num+'0');
+            suppress = 0;
+            buf[i++] = num+'0';
         }
     }
-    LCD_WriteData((unsigned char)(score)+'0');
+    buf[i] = (unsigned char)(score)+'0';
+    buf[i+1] = '\0';
 }
 
 int LCDTick(int state) {
@@ -143,10 +157,12 @@ int LCDTick(int state) {
             if (update) {
                 update = 0;
                 if (gameover) {
-                    LCD_DisplayString(4, "Game Over!");
-                    LCD_DisplayString(16+4, "Score:");
+                    unsigned char buf[13];
+                    LCD_ClearScreen();
+                    LCD_DisplayCenter(0, "Game Over!");
                     LCD_Cursor(27);
-                    printScore(score);
+                    scoreString(score, buf);
+                    LCD_DisplayCenter(1, buf);
                 }else{
                     unsigned char prev = row1[0];
                     LCD_Cursor(1);
@@ -156,6 +172,7 @@ int LCDTick(int state) {
                             LCD_Cursor(i+1);
                             LCD_WriteData(row1[i]?'#':' ');
                         }
+                        prev = row1[i];
                     }
                     prev = row2[0];
                     LCD_Cursor(17);
@@ -165,6 +182,7 @@ int LCDTick(int state) {
                             LCD_Cursor(i+17);
                             LCD_WriteData(row2[i]?'#':' ');
                         }
+                        prev = row2[i];
                     }
                 }
             }
@@ -211,7 +229,7 @@ int main(void) {
     TimerSet(GCD);
     TimerOn();
     LCD_init();
-    LCD_DisplayString(2, "Press to start");
+    LCD_DisplayCenter(0, "Press to start");
     LCD_Cursor(1);
 
     while (1) {
