@@ -31,6 +31,7 @@ unsigned char pause = 1, up = 0, down = 0, gameover = 0,
               update = 0, pos = 0;
 unsigned short score = 0;
 unsigned char row1[16] = {0}, row2[16] = {0};
+unsigned char obs = '#';
 // --------------------------
 
 enum Button_States { input };
@@ -62,8 +63,8 @@ int ButtonTick(int state) {
 
 enum Game_States { gamePause, gamePlay };
 
-const unsigned char maxPeriod = 5, startDiff = 10;
-unsigned char countPeriod, periods, cycles, difficulty, start = 1;
+const unsigned char maxPeriod = 5, startDiff = 50;
+unsigned char countPeriod, periods, cycles, difficulty, lastObs, start = 1;
 
 void clearRows(void) {
     for (unsigned char i = 0; i < 16; i++) {
@@ -76,23 +77,31 @@ int GameTick(int state) {
     switch (state) {
         case gamePause:
             if (!pause) {
+                if (start) srand(time(NULL));
                 if (gameover || start) {
                     score = 0;
                     pos = 0;
                     gameover = start = 0;
                     periods = maxPeriod;
                     difficulty = startDiff;
+                    lastObs = 1;
                     countPeriod = cycles = 0;
                     clearRows();
                     LCD_ClearScreen();
+                } else {
+                    LCD_Cursor(1);
+                    for (unsigned char i = 0; i < 16; i++)
+                        LCD_WriteData(row1[i]?obs:' ');
                 }
                 up = down = 0;
                 state = gamePlay;
             }
             break;
         case gamePlay:
-            if (pause) state = gamePause;
-            else {
+            if (pause) {
+                state = gamePause;
+                update = 1;
+            }else{
                 if (up) {
                     pos = 0;
                     up = down = 0;
@@ -111,16 +120,17 @@ int GameTick(int state) {
                         row2[i] = row2[i+1];
                     }
                     row1[15] = 0; row2[15] = 0;
-                    if (!(rand() % difficulty)) {
+                    if (!(rand() % (difficulty/lastObs))) {
                         if (rand() % 2) row2[15] = 1;
                         else row1[15] = 1;
-                    }
+                        lastObs = 1;
+                    } else lastObs++;
                     if (cycles++ == 10) {
                         cycles = 0;
                         if (periods > 1) periods--;
-                        else if (difficulty > 2) difficulty--;
+                        else if (difficulty > 8) difficulty -= 5;
                     }
-                    score += 1+startDiff+maxPeriod-periods-difficulty;
+                    score += 1+maxPeriod-periods+((startDiff-difficulty)/5);
                 }
             }
             break;
@@ -163,24 +173,26 @@ int LCDTick(int state) {
                     LCD_Cursor(27);
                     scoreString(score, buf);
                     LCD_DisplayCenter(1, buf);
+                } else if (pause) {
+                    LCD_DisplayCenter(0, "Paused");
                 }else{
                     unsigned char prev = row1[0];
                     LCD_Cursor(1);
-                    LCD_WriteData(prev?'#':' ');
+                    LCD_WriteData(prev?obs:' ');
                     for (unsigned char i = 1; i < 16; i++) {
                         if (prev != row1[i]) {
                             LCD_Cursor(i+1);
-                            LCD_WriteData(row1[i]?'#':' ');
+                            LCD_WriteData(row1[i]?obs:' ');
                         }
                         prev = row1[i];
                     }
                     prev = row2[0];
                     LCD_Cursor(17);
-                    LCD_WriteData(prev?'#':' ');
+                    LCD_WriteData(prev?obs:' ');
                     for (unsigned char i = 1; i < 16; i++) {
                         if (prev != row2[i]) {
                             LCD_Cursor(i+17);
-                            LCD_WriteData(row2[i]?'#':' ');
+                            LCD_WriteData(row2[i]?obs:' ');
                         }
                         prev = row2[i];
                     }
@@ -225,7 +237,6 @@ int main(void) {
     for (i = 1; i < numTasks; i++) {
         GCD = findGCD(GCD, tasks[i]->period);
     }
-    srand(time(NULL));
     TimerSet(GCD);
     TimerOn();
     LCD_init();
